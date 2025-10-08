@@ -1,0 +1,68 @@
+services:
+ guacd:
+  image: guacamole/guacd
+  networks:
+   guac-bridge:
+    ipv4_address: 172.19.0.2
+
+ guacamole:
+  image: guacamole/guacamole
+  ports:
+   - "8080:8080"
+  environment:
+   POSTGRESQL_ENABLED: true
+   POSTGRESQL_HOSTNAME: '172.19.0.3'
+   POSTGRESQL_DATABASE: 'guac_db'
+   POSTGRESQL_USERNAME: 'guac_user'
+   POSTGRESQL_PASSWORD: '/run/secrets/db_pass'
+   POSTGRESQL_SSL_MODE: 'disable'
+   LOGBACK_LEVEL: 'debug'
+   PROXY_INTERNAL_PROXIES: 'NGINX_REVERSEPROXY_IP'
+   PROXY_IP_HEADERS: 'x-forwarded-for'
+   PROXY_BY_HEADER: 'x-forwarded-by'
+   REMOTE_IP_VALVE_PROTOCOL_HEADER: 'x-forwarded-proto'
+   API_MAX_REQUEST_SIZE: '1073741824'
+   TOTP_ENABLED: 'true'
+  networks:
+   guac-bridge:
+    ipv4_address: 172.19.0.4
+  secrets:
+   - db_pass
+  depends_on:
+   guac-postgres:
+    condition: service_healthy
+  restart: unless-stopped
+
+ guac-postgres:
+  image: postgres
+  environment:
+   POSTGRES_DB: guac_db
+   POSTGRES_USER: guac_user
+   POSTGRES_PASSWORD: /run/secrets/db_pass
+  networks:
+   guac-bridge:
+    ipv4_address: 172.19.0.3
+  volumes:
+   - ./initdb:/docker-entrypoint-initdb.d:ro
+  secrets:
+   - db_pass
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U guac_user"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+
+networks:
+ guac-bridge:
+  driver: bridge
+  ipam:
+   config:
+    - subnet: 172.19.0.0/24
+
+secrets:
+ db_pass:
+  file: ./db_pass.txt
+
+volumes:
+ initdb:
