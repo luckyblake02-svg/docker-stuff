@@ -21,6 +21,7 @@ This repository contains Docker Compose files designed to simplify deployment an
    git clone https://github.com/luckyblake02-svg/docker-stuff.git
    cd docker-stuff
    ```
+   Rename the respective file to docker-compose.yml!
 
 2. Start Apache Guacamole:
    ```bash
